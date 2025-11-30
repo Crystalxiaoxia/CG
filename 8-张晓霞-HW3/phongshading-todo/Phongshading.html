@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>计算机图形学: 明暗着色和纹理贴图</title>
+    <style>
+        :root {
+            --primary-color: #4a6fa5;
+            --secondary-color: #6d98ba;
+            --accent-color: #ff7e5f;
+            --background-color: #f5f7fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            padding: 15px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        h1 {
+            color: var(--primary-color);
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 1rem;
+        }
+        
+        .controls-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .control-section {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            padding: 12px;
+        }
+        
+        .section-title {
+            font-size: 1rem;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #eaeaea;
+            display: flex;
+            align-items: center;
+        }
+        
+        .section-title::before {
+            content: "";
+            display: inline-block;
+            width: 4px;
+            height: 16px;
+            background-color: var(--accent-color);
+            margin-right: 8px;
+            border-radius: 2px;
+        }
+        
+        .control-item {
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .control-item label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .control-item .value-display {
+            color: var(--accent-color);
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #e0e0e0;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        .keyboard-shortcuts {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+        }
+        
+        .shortcut-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 8px;
+            background-color: #f0f4f8;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            transition: background-color 0.2s;
+        }
+        
+        .shortcut-item:hover {
+            background-color: #e4e8ed;
+        }
+        
+        .key {
+            background-color: #e4e8ed;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 0.75rem;
+            min-width: 20px;
+            text-align: center;
+        }
+        
+        .canvas-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            overflow: hidden;
+            padding: 8px;
+            width: 100%;
+            max-width: 1500px; 
+            height: 800px;    
+            margin: 0 auto; 
+
+        }
+        
+        #canvas {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 4px;
+        }
+        
+        footer {
+            margin-top: 15px;
+            text-align: center;
+            color: #777;
+            font-size: 0.8rem;
+            padding-top: 10px;
+            border-top: 1px solid #e1e4e8;
+        }
+        
+        @media (max-width: 768px) {
+            .controls-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .keyboard-shortcuts {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            
+            .control-section {
+                padding: 10px;
+            }
+            
+            .section-title {
+                font-size: 0.9rem;
+            }
+            
+            .shortcut-item {
+                font-size: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>计算机图形学</h1>
+        <div class="subtitle">明暗着色和纹理贴图</div>
+    </header>
+    
+    <div class="controls-container">
+        <div class="control-section">
+            <div class="section-title">光源控制</div>
+            
+            <div class="keyboard-shortcuts">
+                <div class="shortcut-item">
+                    <span class="key">C</span><span class="key">V</span>
+                    <span>点光源/平行光源</span>
+                </div>
+                <div class="shortcut-item">
+                    <span class="key">Y</span><span class="key">U</span>
+                    <span>光源距离</span>
+                </div>
+                <div class="shortcut-item">
+                    <span class="key">W</span><span class="key">S</span>
+                    <span>绕X轴旋转</span>
+                </div>
+                <div class="shortcut-item">
+                    <span class="key">A</span><span class="key">D</span>
+                    <span>绕Y轴旋转</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="control-section">
+            <div class="section-title">摄像机控制</div>
+            
+            <div class="keyboard-shortcuts">
+                <div class="shortcut-item">
+                    <span class="key">I</span><span class="key">K</span><span class="key">J</span><span class="key">L</span><span class="key">,</span><span class="key">.</span>
+                    <span>移动摄像机</span>
+                </div>
+                <div class="shortcut-item">
+                    <span class="key">M</span><span class="key">N</span>
+                    <span>投影角缩放</span>
+                </div>
+                <div class="shortcut-item">
+                    <span class="key">空格</span>
+                    <span>重置复位</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="control-section">
+            <div class="section-title">渲染参数</div>
+            
+            <div class="control-item">
+                <label for="alphaSlider">
+                    立方体透明度:
+                    <span class="value-display" id="alphaVal">1.00</span>
+                </label>
+                <input type="range" id="alphaSlider" 
+                       min="0" max="1" step="0.01" value="1.0">
+            </div>
+            
+            <div class="control-item">
+                <label for="fogSlider">
+                    场景雾浓度:
+                    <span class="value-display" id="fogValue">0.000</span>
+                </label>
+                <input type="range" id="fogSlider" 
+                       min="0.0" max="0.2" step="0.001" value="0.00">
+            </div>
+        </div>
+    </div>
+    
+    <div class="canvas-container">
+        <canvas id="canvas">Oops ... your browser doesn't support the HTML5 canvas element</canvas>
+    </div>
+    
+    <footer>
+        计算机图形学实验 - 明暗着色和纹理贴图
+    </footer>
+    
+    <!-- 隐藏的纹理图片 -->
+    <img id="cubeTexImage" src="container.png" hidden>
+    <img id="planeTexImage" src="wood.png" hidden>
+    
+    <!-- 引入JavaScript文件 -->
+    <script type="text/javascript" src="./Common/webgl-utils.js"></script>
+    <script type="text/javascript" src="./Common/initShaders2.js"></script>
+    <script type="text/javascript" src="./Common/MVnew.js"></script>
+    <script type="text/javascript" src="./Models.js"></script>
+    <script type="text/javascript" src="./configMaterialParameters.js"></script>
+    <script type="text/javascript" src="./configTexture.js"></script>
+    <script type="text/javascript" src="./Phongshading.js"></script>
+    
+    <script>
+        // 更新雾浓度显示
+        document.getElementById('fogSlider').addEventListener('input', function(e) {
+            document.getElementById('fogValue').textContent = parseFloat(e.target.value).toFixed(3);
+            updateFogDensity(e.target.value);
+        });
+        
+        // 更新透明度显示
+        document.getElementById('alphaSlider').addEventListener('input', function(e) {
+            document.getElementById('alphaVal').textContent = parseFloat(e.target.value).toFixed(2);
+        }); 
+    </script>
+</body>
+</html>

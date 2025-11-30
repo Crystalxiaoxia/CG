@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>计算机图形学：网格建模与3D坐标变换</title>
+  <style>
+    :root {
+      --primary-color: #2c3e50;
+      --secondary-color: #3498db;
+      --accent-color: #9b59b6;
+      --light-color: #ecf0f1;
+      --dark-color: #34495e;
+      --success-color: #2ecc71;
+      --warning-color: #f39c12;
+      --danger-color: #e74c3c;
+      --border-radius: 8px;
+      --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+      background: linear-gradient(135deg, #1a2a3a, #2c3e50);
+      color: var(--light-color);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .header h1 {
+      font-size: 2.2rem;
+      margin-bottom: 10px;
+      background: linear-gradient(90deg, var(--secondary-color), var(--accent-color));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      font-weight: 600;
+    }
+    
+    .header p {
+      font-size: 1.1rem;
+      opacity: 0.8;
+    }
+    
+    .main-container {
+      display: flex;
+      flex-direction: column;
+      gap: 25px;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    
+    .controls-section {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 25px;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    
+    .model-selector {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: var(--border-radius);
+      padding: 20px;
+      box-shadow: var(--box-shadow);
+      flex: 1;
+      min-width: 250px;
+    }
+    
+    .model-selector h2 {
+      font-size: 1.3rem;
+      margin-bottom: 15px;
+      color: var(--secondary-color);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .model-selector h2::before {
+      content: "📦";
+    }
+    
+    .model-selector select {
+      width: 100%;
+      padding: 12px 15px;
+      border-radius: var(--border-radius);
+      border: none;
+      background: rgba(255, 255, 255, 0.15);
+      color: #3498db;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .model-selector select:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    
+    .model-selector select:focus {
+      outline: 2px solid var(--secondary-color);
+    }
+    
+    .instructions {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: var(--border-radius);
+      padding: 20px;
+      box-shadow: var(--box-shadow);
+      flex: 2;
+      min-width: 300px;
+    }
+    
+    .instructions h2 {
+      font-size: 1.3rem;
+      margin-bottom: 15px;
+      color: var(--secondary-color);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .instructions h2::before {
+      content: "⌨️";
+    }
+    
+    .instruction-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 15px;
+    }
+    
+    .instruction-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 15px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: var(--border-radius);
+      transition: all 0.3s ease;
+    }
+    
+    .instruction-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: translateY(-2px);
+    }
+    
+    .key {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 30px;
+      height: 30px;
+      padding: 0 8px;
+      background: var(--dark-color);
+      border-radius: 5px;
+      font-weight: bold;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    
+    .canvas-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: var(--border-radius);
+      padding: 20px;
+      box-shadow: var(--box-shadow);
+      min-height: 500px;
+    }
+    
+    canvas, #container {
+      width: 90vmin;
+      height: 90vmin;
+      border-radius: var(--border-radius);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #container {
+      display: none; /* 默认隐藏 Three.js 场景 */
+    }
+    
+    .footer {
+      text-align: center;
+      margin-top: 30px;
+      padding-top: 15px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 0.9rem;
+      opacity: 0.7;
+    }
+    
+    @media (max-width: 768px) {
+      .controls-section {
+        flex-direction: column;
+      }
+      
+      .model-selector, .instructions {
+        width: 100%;
+      }
+      
+      .instruction-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .header h1 {
+        font-size: 1.8rem;
+      }
+    }
+  </style>
+
+  <!-- 原生 WebGL -->
+  <script src="./Common/webgl-utils.js"></script>
+  <script src="./Common/initShaders2.js"></script>
+  <script src="./Common/MVnew.js"></script>
+  <script src="./models-data.js"></script>
+  <script src="./3d-wandering.js"></script>
+
+  <!-- Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r132/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+  <script src="./solar-system.js"></script>
+</head>
+
+<body>
+  <div class="header">
+    <h1>计算机图形学: 网格建模与3D坐标变换</h1>
+    <p>交互式3D图形演示 - 使用WebGL实现</p >
+  </div>
+  
+  <div class="main-container">
+    <div class="controls-section">
+      <div class="model-selector">
+        <h2>选择模型</h2>
+        <select id="modelSelect" onchange="modelChange(this.value)">
+          <option value="cube">方块</option>
+          <option value="sphere">球体</option>
+          <option value="hat">墨西哥帽</option>
+          <option value="solar">🌞 太阳系</option>
+        </select>
+      </div>
+      
+      <div class="instructions">
+        <h2>操作说明</h2>
+        <div class="instruction-grid">
+          <div class="instruction-item">
+            <span class="key">Z</span>
+            <span class="key">C</span>
+            <span>物体整体放大/缩小</span>
+          </div>
+          <div class="instruction-item">
+            <span class="key">W</span>
+            <span class="key">S</span>
+            <span>相机绕X轴旋转</span>
+          </div>
+          <div class="instruction-item">
+            <span class="key">A</span>
+            <span class="key">D</span>
+            <span>相机绕Y轴旋转</span>
+          </div>
+          <div class="instruction-item">
+            <span class="key">P</span>
+            <span>切换投影方式</span>
+          </div>
+          <div class="instruction-item">
+            <span class="key">M</span>
+            <span class="key">N</span>
+            <span>透视投影时调整俯仰角</span>
+          </div>
+          <div class="instruction-item">
+            <span class="key">R</span>
+            <span class="key">T</span>
+            <span>开启/关闭后向面剔除</span>
+          </div>
+          <div class="instruction-item">
+            <span class="key">B</span>
+            <span class="key">V</span>
+            <span>开启/关闭深度缓存</span>
+          </div>
+          <div class="instruction-item">
+            <span class="key">空格</span>
+            <span>重置复位</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="canvas-container">
+      <canvas id="canvas"></canvas>
+      <div id="container"></div>
+    </div>
+  </div>
+  
+  <div class="footer">
+    <p>计算机图形学实验项目 &copy; 2025</p >
+  </div>
+</body>
+</html>
