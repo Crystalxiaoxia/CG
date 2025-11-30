@@ -105,7 +105,10 @@ void main()
 
     // 混合雾
     vec3 finalColor = mix(fogColor, resultColor, fogFactor);
-    FragColor = vec4(finalColor, u_alpha);
+    // 雾也影响透明度
+    // 物理原理：雾越浓，物体越像雾本身（不透明）
+    float finalAlpha = mix(1.0, u_alpha, fogFactor);
+    FragColor = vec4(finalColor, finalAlpha);
 }
 
 
